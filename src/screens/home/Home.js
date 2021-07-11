@@ -1,15 +1,10 @@
 import React, { Component } from 'react';
-import ReactDOM from 'react-dom';
 import './Home.css';
-import Details from '../details/Details';
 import Header from '../../common/header/Header';
 import { withStyles } from '@material-ui/core/styles';
-import moviesData from '../../assets/movieData';
 import GridList from '@material-ui/core/GridList';
 import GridListTile from '@material-ui/core/GridListTile';
 import GridListTileBar from '@material-ui/core/GridListTileBar';
-import genres from '../../common/genres';
-import artists from '../../common/artists';
 import Card from '@material-ui/core/Card';
 import CardContent from '@material-ui/core/CardContent';
 import FormControl from '@material-ui/core/FormControl';
@@ -59,9 +54,78 @@ class Home extends Component {
         super();
         this.state = {
             movieName: "",
+            upcomingMovies: [],
+            releasedMovies: [],
             genres: [],
-            artists: []
+            artists: [],
+            genresList: [],
+            artistsList: [],
+            releaseDateStart: "",
+            releaseDateEnd: ""
         }
+    }
+
+    componentWillMount() {
+        // Get upcoming movies
+        let data = null;
+        let xhr = new XMLHttpRequest();
+        let that = this;
+        xhr.addEventListener("readystatechange", function () {
+            if (this.readyState === 4) {
+                that.setState({
+                    upcomingMovies: JSON.parse(this.responseText).movies
+                });
+            }
+        });
+
+        xhr.open("GET", this.props.baseUrl + "movies?status=PUBLISHED");
+        xhr.setRequestHeader("Cache-Control", "no-cache");
+        xhr.send(data);
+
+        // Get released movies
+        let dataReleased = null;
+        let xhrReleased = new XMLHttpRequest();
+        xhrReleased.addEventListener("readystatechange", function () {
+            if (this.readyState === 4) {
+                that.setState({
+                    releasedMovies: JSON.parse(this.responseText).movies
+                });
+            }
+        });
+
+        xhrReleased.open("GET", this.props.baseUrl + "movies?status=RELEASED");
+        xhrReleased.setRequestHeader("Cache-Control", "no-cache");
+        xhrReleased.send(dataReleased);
+
+        // Get filters
+        let dataGenres = null;
+        let xhrGenres = new XMLHttpRequest();
+        xhrGenres.addEventListener("readystatechange", function () {
+            if (this.readyState === 4) {
+                that.setState({
+                    genresList: JSON.parse(this.responseText).genres
+                });
+            }
+        });
+
+        xhrGenres.open("GET", this.props.baseUrl + "genres");
+        xhrGenres.setRequestHeader("Cache-Control", "no-cache");
+        xhrGenres.send(dataGenres);
+
+        // Get artists
+        let dataArtists = null;
+        let xhrArtists = new XMLHttpRequest();
+        xhrArtists.addEventListener("readystatechange", function () {
+            if (this.readyState === 4) {
+                that.setState({
+                    artistsList: JSON.parse(this.responseText).artists
+                });
+            }
+        });
+
+        xhrArtists.open("GET", this.props.baseUrl + "artists");
+        xhrArtists.setRequestHeader("Cache-Control", "no-cache");
+        xhrArtists.send(dataArtists);
     }
 
     movieNameChangeHandler = event => {
@@ -76,23 +140,65 @@ class Home extends Component {
         this.setState({ artists: event.target.value });
     }
 
+    releaseDateStartHandler = event => {
+        this.setState({ releaseDateStart: event.target.value });
+    }
+
+    releaseDateEndHandler = event => {
+        this.setState({ releaseDateEnd: event.target.value });
+    }
+
     movieClickHandler = (movieId) => {
-        ReactDOM.render(<Details movieId={movieId} />, document.getElementById('root'));
+        this.props.history.push('/movie/' + movieId);
+    }
+
+    filterApplyHandler = () => {
+        let queryString = "?status=RELEASED";
+        if (this.state.movieName !== "") {
+            queryString += "&title=" + this.state.movieName;
+        }
+        if (this.state.genres.length > 0) {
+            queryString += "&genres=" + this.state.genres.toString();
+        }
+        if (this.state.artists.length > 0) {
+            queryString += "&artists=" + this.state.artists.toString();
+        }
+        if (this.state.releaseDateStart !== "") {
+            queryString += "&start_date=" + this.state.releaseDateStart;
+        }
+        if (this.state.releaseDateEnd !== "") {
+            queryString += "&end_date=" + this.state.releaseDateEnd;
+        }
+
+        let that = this;
+        let dataFilter = null;
+        let xhrFilter = new XMLHttpRequest();
+        xhrFilter.addEventListener("readystatechange", function () {
+            if (this.readyState === 4) {
+                that.setState({
+                    releasedMovies: JSON.parse(this.responseText).movies
+                });
+            }
+        });
+
+        xhrFilter.open("GET", this.props.baseUrl + "movies" + encodeURI(queryString));
+        xhrFilter.setRequestHeader("Cache-Control", "no-cache");
+        xhrFilter.send(dataFilter);
     }
 
     render() {
         const { classes } = this.props;
         return (
             <div>
-                <Header />
+                <Header baseUrl={this.props.baseUrl} />
 
                 <div className={classes.upcomingMoviesHeading}>
                     <span>Upcoming Movies</span>
                 </div>
 
                 <GridList cols={5} className={classes.gridListUpcomingMovies} >
-                    {moviesData.map(movie => (
-                        <GridListTile key={movie.id}>
+                    {this.state.upcomingMovies.map(movie => (
+                        <GridListTile key={"upcoming" + movie.id}>
                             <img src={movie.poster_url} className="movie-poster" alt={movie.title} />
                             <GridListTileBar title={movie.title} />
                         </GridListTile>
@@ -102,7 +208,7 @@ class Home extends Component {
                 <div className="flex-container">
                     <div className="left">
                         <GridList cellHeight={350} cols={4} className={classes.gridListMain}>
-                            {moviesData.map(movie => (
+                            {this.state.releasedMovies.map(movie => (
                                 <GridListTile onClick={() => this.movieClickHandler(movie.id)} className="released-movie-grid-item" key={"grid" + movie.id}>
                                     <img src={movie.poster_url} className="movie-poster" alt={movie.title} />
                                     <GridListTileBar
@@ -136,11 +242,10 @@ class Home extends Component {
                                         value={this.state.genres}
                                         onChange={this.genreSelectHandler}
                                     >
-                                        <MenuItem value="0">None</MenuItem>
-                                        {genres.map(genre => (
-                                            <MenuItem key={genre.id} value={genre.name}>
-                                                <Checkbox checked={this.state.genres.indexOf(genre.name) > -1} />
-                                                <ListItemText primary={genre.name} />
+                                        {this.state.genresList.map(genre => (
+                                            <MenuItem key={genre.id} value={genre.genre}>
+                                                <Checkbox checked={this.state.genres.indexOf(genre.genre) > -1} />
+                                                <ListItemText primary={genre.genre} />
                                             </MenuItem>
                                         ))}
                                     </Select>
@@ -155,8 +260,7 @@ class Home extends Component {
                                         value={this.state.artists}
                                         onChange={this.artistSelectHandler}
                                     >
-                                        <MenuItem value="0">None</MenuItem>
-                                        {artists.map(artist => (
+                                        {this.state.artistsList.map(artist => (
                                             <MenuItem key={artist.id} value={artist.first_name + " " + artist.last_name}>
                                                 <Checkbox checked={this.state.artists.indexOf(artist.first_name + " " + artist.last_name) > -1} />
                                                 <ListItemText primary={artist.first_name + " " + artist.last_name} />
@@ -172,6 +276,7 @@ class Home extends Component {
                                         type="date"
                                         defaultValue=""
                                         InputLabelProps={{ shrink: true }}
+                                        onChange={this.releaseDateStartHandler}
                                     />
                                 </FormControl>
 
@@ -182,11 +287,12 @@ class Home extends Component {
                                         type="date"
                                         defaultValue=""
                                         InputLabelProps={{ shrink: true }}
+                                        onChange={this.releaseDateEndHandler}
                                     />
                                 </FormControl>
                                 <br /><br />
                                 <FormControl className={classes.formControl}>
-                                    <Button variant="contained" color="primary">
+                                    <Button onClick={() => this.filterApplyHandler()} variant="contained" color="primary">
                                         APPLY
                                     </Button>
                                 </FormControl>

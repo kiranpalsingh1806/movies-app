@@ -1,21 +1,23 @@
 import React, { Component } from 'react';
-import ReactDOM from 'react-dom';
 import Header from '../../common/header/Header';
-import moviesData from '../../assets/movieData';
 import Typography from '@material-ui/core/Typography';
 import './Details.css';
-import Home from '../home/Home';
 import YouTube from 'react-youtube';
 import GridList from '@material-ui/core/GridList';
 import GridListTile from '@material-ui/core/GridListTile';
 import GridListTileBar from '@material-ui/core/GridListTileBar';
 import StarBorderIcon from '@material-ui/icons/StarBorder';
+import { Link } from 'react-router-dom';
 
 class Details extends Component {
     constructor() {
         super();
         this.state = {
-            movie: {},
+            movie: {
+                genres: [],
+                trailer_url: "",
+                artists: []
+            },
             starIcons: [{
                 id: 1,
                 stateId: "star1",
@@ -45,15 +47,20 @@ class Details extends Component {
     }
 
     componentWillMount() {
-        let currentState = this.state;
-        currentState.movie = moviesData.filter((mov) => {
-            return mov.id === this.props.movieId
-        })[0];
-        this.setState({ currentState });
-    }
+        let that = this;
+        let dataMovie = null;
+        let xhrMovie = new XMLHttpRequest();
+        xhrMovie.addEventListener("readystatechange", function () {
+            if (this.readyState === 4) {
+                that.setState({
+                    movie: JSON.parse(this.responseText)
+                });
+            }
+        });
 
-    backToHomeHandler = () => {
-        ReactDOM.render(<Home />, document.getElementById('root'));
+        xhrMovie.open("GET", this.props.baseUrl + "movies/" + this.props.match.params.id);
+        xhrMovie.setRequestHeader("Cache-Control", "no-cache");
+        xhrMovie.send(dataMovie);
     }
 
     artistClickHandler = (url) => {
@@ -87,11 +94,11 @@ class Details extends Component {
         }
         return (
             <div className="details">
-                <Header showBookShowButton="true" />
+                <Header id={this.props.match.params.id} baseUrl={this.props.baseUrl} showBookShowButton="true" />
                 <div className="back">
-                    <Typography onClick={this.backToHomeHandler}>
-                        &#60; Back to Home
-                        </Typography>
+                    <Typography>
+                        <Link to="/">  &#60; Back to Home</Link>
+                    </Typography>
                 </div>
                 <div className="flex-containerDetails">
                     <div className="leftDetails">
